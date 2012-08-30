@@ -33,6 +33,8 @@ global.Runner.run = () ->
 
 Object::shouldBeFalse = () -> if @ != false then throw "expected: false, but got: #{@}"
 Object::shouldBeTrue = () -> if @ != true then throw "expected: true, but got: #{@}"
+Object::shouldEqual = (expected) -> if @ is expected then throw "expected #{@} to equal #{expected}"
+Object::shouldBe = (expected) -> if @ isnt expected then throw "expected #{@} to be #{expected}"
 
 fixture "sample"
   setup: ->
@@ -40,7 +42,9 @@ fixture "sample"
 
   'the awesome failing test': ->
       console.log 'a failing test'
-      true.shouldBeFalse()
+      t = new Boolean()
+      t.shouldEqual(t)
+      false.shouldBe(new Boolean())
 
   teardown: ->
       console.log 'A teardown'
