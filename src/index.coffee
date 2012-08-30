@@ -1,12 +1,8 @@
-_ = require 'underscore'
-
-window = {}
-global.window = window
-
+global.window = {}
 global._fixtures = []
 
 global.fixture = (name, fixtureBody) ->
-   body = fixtureBody()
+   body = fixtureBody
    setup = body.setup ? (()->)
    teardown = body.teardown ? (()->)
    _fixtures.push {name, body,setup,teardown}
@@ -15,28 +11,36 @@ global.Runner = {}
 global.Runner.run = () ->
    for fixture in global._fixtures
       console.log 'executing fixture: ' + fixture.name
-      setup?()
 
-      for own name, test of fixture.body
-         continue unless name == 'setup' or name == 'teardown'
-         console.log 'executing test: ' + name
-         try
-            test()
-         catch error
-            console.log error
-      teardown?()
+      for own testName, testAction of fixture.body
+        continue if testName == 'setup' or testName == 'teardown'
+        
+        try
+          setup?()
+        catch error
+          console.log "error in setup for : #{testName} \n\t Error: #{error}"
+          
+        try
+          testAction()
+        catch error
+          console.log "error in test for : #{testName} \n\t Error: #{error}"
 
-Object::shouldBeFalse = () -> throw 'expected: false, but got: ' + @ unless @ == false
-Object::shouldBeTrue = () -> @ == true
+        try
+          teardown?()
+        catch error
+          console.log "error in teardown for: #{testName} \n\t Error: #{error}"
 
 
-fixture "sample", ->
+Object::shouldBeFalse = () -> if @ != false then throw "expected: false, but got: #{@}"
+Object::shouldBeTrue = () -> if @ != true then throw "expected: true, but got: #{@}"
+
+fixture "sample"
   setup: ->
       console.log 'hello from setup'
 
   'the awesome failing test': ->
       console.log 'a failing test'
-      true.shouldbeFalse()
+      true.shouldBeFalse()
 
   teardown: ->
       console.log 'A teardown'
