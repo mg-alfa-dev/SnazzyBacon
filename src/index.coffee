@@ -1,12 +1,15 @@
+_ = require 'underscore'
+
 window = {}
 global.window = window
 
 global._fixtures = []
 
 global.fixture = (name, fixtureBody) ->
-   setup = fixtureBody.setup ? (()->)
-   teardown = fixtureBody.teardown ? (()->)
-   _fixtures.push {name: name, body: fixtureBody(), setup: setup, teardown: teardown}
+   body = fixtureBody()
+   setup = body.setup ? (()->)
+   teardown = body.teardown ? (()->)
+   _fixtures.push {name, body,setup,teardown}
 
 global.Runner = {}
 global.Runner.run = () ->
@@ -15,19 +18,25 @@ global.Runner.run = () ->
       setup?()
 
       for own name, test of fixture.body
+         continue unless name == 'setup' or name == 'teardown'
          console.log 'executing test: ' + name
-         test()
-
+         try
+            test()
+         catch error
+            console.log error
       teardown?()
 
+Object::shouldBeFalse = () -> throw 'expected: false, but got: ' + @ unless @ == false
+Object::shouldBeTrue = () -> @ == true
 
 
 fixture "sample", ->
   setup: ->
       console.log 'hello from setup'
 
-  'it should do awesome': ->
-      console.log 'the awesome test'
+  'the awesome failing test': ->
+      console.log 'a failing test'
+      true.shouldbeFalse()
 
   teardown: ->
       console.log 'A teardown'
