@@ -1,6 +1,7 @@
 require 'should'
 _ = require 'underscore'
 glob = require 'glob'
+path = require 'path'
 #jsdom = require 'jsdom'
 
 global.window = global
@@ -20,7 +21,7 @@ global.fixture = (name, fixtureBody) ->
 class global.Runner
     constructor: (@testRoot, @fileMatcher) ->
         @files = glob.sync "#{@testRoot}/**/#{fileMatcher}"
-        _.map @files, (o) -> require(o)
+        _.map @files, (o) -> require(path.resolve o)
     
     formatTestName: (fixture, test) -> "#{fixture} \n\t #{test}"
 
@@ -58,5 +59,5 @@ class global.Runner
         if @errors.length > 0 then _.map @errors, (o) -> console.log "#{o}\n"
         process.exit()
 
-runner = new Runner(".", *_test.coffee)
+runner = new Runner(".", "**/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
 runner.run()
