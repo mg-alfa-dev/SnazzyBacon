@@ -1,5 +1,7 @@
 require 'should'
 _ = require 'underscore'
+glob = require 'glob'
+path = require 'path'
 #jsdom = require 'jsdom'
 
 global.window = global
@@ -17,7 +19,10 @@ global.fixture = (name, fixtureBody) ->
    teardown = body.teardown ? (()->)
    _fixtures.push {name, body,setup,teardown}
 
-global.Runner = {}
+class global.Runner
+  constructor: (@testRoot, @fileMatcher) ->
+    @files = glob.sync "#{@testRoot}/**/#{fileMatcher}"
+
 global.Runner.run = () ->
   @tests = 0
   @errors = []
@@ -51,6 +56,8 @@ global.Runner.run = () ->
     console.log "ran #{@tests} tests >> #{@passingTests.length} passed >> #{@failingTests.length} failed"
     if @failingTests.length > 0 then _.map @failingTests, (o) -> console.log "#{o}\n"
     if @errors.length > 0 then _.map @errors, (o) -> console.log "#{o}\n"
+
+
 
 fixture "sample"
   setup: ->
