@@ -1,4 +1,14 @@
-global.window = {}
+require 'should'
+_ = require 'underscore'
+#jsdom = require 'jsdom'
+
+global.window = global
+global.document = {}# = jsdom.jsdom()
+global.navigator = {}
+
+navigator.userAgent = ""
+document.addEventListener = ->
+
 global._fixtures = []
 
 global.fixture = (name, fixtureBody) ->
@@ -9,42 +19,47 @@ global.fixture = (name, fixtureBody) ->
 
 global.Runner = {}
 global.Runner.run = () ->
-   for fixture in global._fixtures
+  @tests = 0
+  @errors = []
+  @passingTests = []
+  @failingTests = []
+  @testNameFormatter = (fixture, test) -> "#{fixture} \n\t #{test}"
+  for fixture in global._fixtures
       console.log 'executing fixture: ' + fixture.name
-
+       
       for own testName, testAction of fixture.body
         continue if testName == 'setup' or testName == 'teardown'
         
+        @tests++
         try
-          setup?()
+          fixture.setup?()
         catch error
           console.log "error in setup for : #{testName} \n\t Error: #{error}"
           
         try
           testAction()
+          @passingTests.push testName
         catch error
-          console.log "error in test for : #{testName} \n\t Error: #{error}"
+          @errors.push  "error in test #{fixture.name} -> #{testName} \n\t Error: #{error} \n\t Trace: #{error.stack}"
+          @failingTests.push @testNameFormatter(fixture.name, testName)
 
         try
-          teardown?()
+          fixture.teardown?()
         catch error
           console.log "error in teardown for: #{testName} \n\t Error: #{error}"
 
-
-Object::shouldBeFalse = () -> if @ != false then throw "expected: false, but got: #{@}"
-Object::shouldBeTrue = () -> if @ != true then throw "expected: true, but got: #{@}"
-Object::shouldEqual = (expected) -> if @ is expected then throw "expected #{@} to equal #{expected}"
-Object::shouldBe = (expected) -> if @ isnt expected then throw "expected #{@} to be #{expected}"
+    console.log "ran #{@tests} tests >> #{@passingTests.length} passed >> #{@failingTests.length} failed"
+    if @failingTests.length > 0 then _.map @failingTests, (o) -> console.log "#{o}\n"
+    if @errors.length > 0 then _.map @errors, (o) -> console.log "#{o}\n"
 
 fixture "sample"
   setup: ->
       console.log 'hello from setup'
 
   'the awesome failing test': ->
-      console.log 'a failing test'
       t = new Boolean()
-      t.shouldEqual(t)
-      false.shouldBe(new Boolean())
+      t.should.equal(t)
+      false.should.equal(true)
 
   teardown: ->
       console.log 'A teardown'
