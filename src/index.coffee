@@ -2,16 +2,25 @@ require 'should'
 _ = require 'underscore'
 glob = require 'glob'
 path = require 'path'
-#jsdom = require 'jsdom'
+jsdom = require 'jsdom'
 
 global.window = global
-global.document = {}# = jsdom.jsdom()
+global.document = jsdom.jsdom()
 global.navigator = {}
 
 navigator.userAgent = ""
 document.addEventListener = ->
 
 global._fixtures = []
+global.includeJsFile = (filePath, contextObjectName) ->
+    syncedFilePath = glob.sync "./**/#{filePath}"
+    resolvedPath = path.resolve syncedFilePath[0]
+
+    if contextObjectName?
+        window[contextObjectName] = require(resolvedPath)
+    else
+        require(resolvedPath)
+
 global.fixture = (name, fixtureBody) ->
    body = fixtureBody
    setup = body.setup ? (()->)
@@ -22,7 +31,7 @@ class global.Runner
     constructor: (@testRoot, @fileMatcher) ->
         @files = glob.sync "#{@testRoot}/**/#{fileMatcher}"
         _.map @files, (o) -> require(path.resolve o)
-    
+
     formatTestName: (fixture, test) -> "#{fixture} \n\t #{test}"
 
     run: ->
