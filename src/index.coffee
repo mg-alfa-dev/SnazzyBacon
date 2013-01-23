@@ -92,6 +92,7 @@ class global.Runner
             
             setupFailed = false
             feedback.start fixture.name, testName
+
             try
               fixture.setup?()
             catch error
