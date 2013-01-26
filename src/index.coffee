@@ -132,16 +132,26 @@ class PorcelainFeedback
   start: (fixtureName, testName) -> @porcelainMessage "TESTSTART", { fixture: fixtureName, test: testName }
   pass: (fixtureName, testName) -> @porcelainMessage "TESTPASS", { fixture: fixtureName, test: testName }
   fail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: error.stack } if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) } if error.name == "AssertionError"
     @porcelainMessage "TESTFAIL", { fixture: fixtureName, test: testName, error: error }
   setupFail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: error.stack } if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) }# if error.name == "AssertionError"
     @porcelainMessage "SETUPFAIL", { fixture: fixtureName, test: testName, error: error }
   tearDownFail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: error.stack } if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) }# if error.name == "AssertionError"
     @porcelainMessage "TEARDOWNFAIL", { fixture: fixtureName, test: testName, error: error }
   finish: () ->
 
+  trimStack: (stack) =>
+    return "unknown" if stack == "unknown"
+    stackArr = stack.split '\n'
+    while true
+      break if stackArr.length == 0
+      break if stackArr[stackArr.length - 1].indexOf("Runner.global.Runner.Runner.run") > -1
+      stackArr.pop()
+    stackArr.pop() if stackArr.length > 1
+    return "unknown" if stackArr.length == 0
+    return stackArr.join "\n"
 
 class global.Runner
   constructor: (@testRoot, @fileMatcher) ->
