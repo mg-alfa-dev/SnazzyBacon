@@ -132,13 +132,13 @@ class PorcelainFeedback
   start: (fixtureName, testName) -> @porcelainMessage "TESTSTART", { fixture: fixtureName, test: testName }
   pass: (fixtureName, testName) -> @porcelainMessage "TESTPASS", { fixture: fixtureName, test: testName }
   fail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: @trimStack(error.stack) } if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) }
     @porcelainMessage "TESTFAIL", { fixture: fixtureName, test: testName, error: error }
   setupFail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: @trimStack(error.stack) }# if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) }
     @porcelainMessage "SETUPFAIL", { fixture: fixtureName, test: testName, error: error }
   tearDownFail: (fixtureName, testName, error) ->
-    error = { message: error.message, stack: @trimStack(error.stack) }# if error.name == "AssertionError"
+    error = { message: error.message, stack: @trimStack(error.stack) }
     @porcelainMessage "TEARDOWNFAIL", { fixture: fixtureName, test: testName, error: error }
   finish: () ->
 
