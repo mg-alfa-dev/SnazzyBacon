@@ -159,9 +159,13 @@ class PorcelainFeedback
     return stackArr.join "\n"
 
 class TeamCityFeedback
-    outputMessage: (state, name, message, details) ->
+    outputMessage: (state, name, error) ->
       name = name.replace "'", ""
-      process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
+      if error?
+        error = error.replace "'", ""
+        process.stdout.write "##teamcity[#{state} name='#{name}' message='#{error}' details='#{error}']\r\n"
+      else
+        process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
 
     start: (fixtureName, testName) -> 
       @outputMessage 'testStarted', testName
@@ -173,11 +177,9 @@ class TeamCityFeedback
       @outputMessage 'testFinished', testName
      
     fail: (fixtureName, testName, error) -> 
-      @outputMessage 'testFailed', testName
+      @outputMessage 'testFailed', testName, error
       @outputMessage 'testFinished', testName
-      
-      # process.stdout.write "##teamcity[testFailed name='#{testName}' message='#{error}' details='#{error}']\r\n"
-      # process.stdout.write "##teamcity[testFinished name='#{testName}']\r\n"
+     
       
     setupFail: (fixtureName, testName, error) ->
     tearDownFail: (fixtureName, testName, error) ->
