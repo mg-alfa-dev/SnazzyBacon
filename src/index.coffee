@@ -160,9 +160,9 @@ class PorcelainFeedback
 
 class TeamCityFeedback
     outputMessage: (state, name, error) ->
-      name = name.replace "'", ""
+      name = name.replace /'/g, ''
       if error?
-        error = error.replace "'", ""
+        error = error.replace /'/g, ''
         process.stdout.write "##teamcity[#{state} name='#{name}' message='#{error}' details='#{error}']\r\n"
       else
         process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
