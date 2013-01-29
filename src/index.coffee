@@ -1,7 +1,7 @@
 require 'should'
 glob = require 'glob'
-path = require 'path'
 jsdom = require 'jsdom'
+path = require 'path'
 
 global.window = global
 global.document = jsdom.jsdom()
@@ -61,6 +61,9 @@ class NormalFeedback
   tearDownFail: (fixtureName, testName, error) ->
     @teardownFailures[fixtureName] = @trimStack(error.stack)
     process.stdout.write "T"
+    
+  fixtureStart: () ->
+  fixtureFinish: () ->    
     
   finish: () ->
     numberOfFailingTests = 0
@@ -141,6 +144,8 @@ class PorcelainFeedback
     error = { message: error.message, stack: @trimStack(error.stack) }
     @porcelainMessage "TEARDOWNFAIL", { fixture: fixtureName, test: testName, error: error }
   finish: () ->
+  fixtureStart: () ->
+  fixtureFinish: () ->
 
   trimStack: (stack) =>
     return "unknown" if stack == "unknown"
@@ -153,14 +158,50 @@ class PorcelainFeedback
     return "unknown" if stackArr.length == 0
     return stackArr.join "\n"
 
+class TeamCityFeedback
+    outputMessage: (state, name, message, details) ->
+      name = name.replace "'", ""
+      process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
+
+    start: (fixtureName, testName) -> 
+      @outputMessage 'testStarted', testName
+      
+    finish: (fixtureName, testName) -> 
+   
+    pass: (fixtureName, testName) -> 
+      @outputMessage 'testPassed', testName
+      @outputMessage 'testFinished', testName
+     
+    fail: (fixtureName, testName, error) -> 
+      @outputMessage 'testFailed', testName
+      @outputMessage 'testFinished', testName
+      
+      # process.stdout.write "##teamcity[testFailed name='#{testName}' message='#{error}' details='#{error}']\r\n"
+      # process.stdout.write "##teamcity[testFinished name='#{testName}']\r\n"
+      
+    setupFail: (fixtureName, testName, error) ->
+    tearDownFail: (fixtureName, testName, error) ->
+    
+    fixtureStart: (fixtureName) ->
+      @outputMessage 'testSuiteStarted', fixtureName
+    
+    fixtureFinish: (fixtureName) ->
+      @outputMessage 'testSuiteFinished', fixtureName
+      
 class global.Runner
   constructor: (@testRoot, @fileMatcher) ->
     @files = glob.sync "#{@testRoot}/**/#{fileMatcher}"
     require(path.resolve file) for file in @files
-    @porcelain = (arg for arg in (process.argv.splice 2) when arg == '--porcelain').length > 0
-
+    @porcelain = process.argv[2] == '--porcelain'
+    @teamcity = process.argv[2] == '--teamcity'
+    
   run: ->
-    feedback = if @porcelain then (new PorcelainFeedback) else (new NormalFeedback)
+    if @teamcity
+      feedback = new TeamCityFeedback
+    if @porcelain
+      feedback = new PorcelainFeedback
+    if !@porcelain and !@teamcity
+      feedback = new NormalFeedback
 
     for fixture in global._fixtures
       for own testName, testAction of fixture.body
