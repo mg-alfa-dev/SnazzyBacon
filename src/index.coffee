@@ -2,6 +2,8 @@ require 'should'
 glob = require 'glob'
 jsdom = require 'jsdom'
 path = require 'path'
+fs = require 'fs'
+xmlbuilder = require 'xmlbuilder'
 
 global.window = global
 global.document = jsdom.jsdom()
@@ -38,10 +40,6 @@ class NormalFeedback
   formatTestName: (fixtureName, testName) -> "#{fixtureName} -> #{testName}"
   
   start: (fixtureName, testName) -> 
-    @errors[fixtureName] = []
-    @failingTests[fixtureName] = []
-    @setupFailures[fixtureName] = null
-    @teardownFailures[fixtureName] = null
     @testCount++
 
   pass: (fixtureName, testName) ->
@@ -62,14 +60,19 @@ class NormalFeedback
     @teardownFailures[fixtureName] = @trimStack(error.stack)
     process.stdout.write "T"
     
-  fixtureStart: () ->
+  fixtureStart: (fixtureName) ->
+    @errors[fixtureName] = []
+    @failingTests[fixtureName] = []
+    @setupFailures[fixtureName] = null
+    @teardownFailures[fixtureName] = null
+  
   fixtureFinish: () ->    
     
   finish: () ->
     numberOfFailingTests = 0
     for fixtureName, tests of @failingTests
       numberOfFailingTests += tests.length
-    console.log "\n\nran #{@tests} tests >> #{@passingTests.length} passed >> #{numberOfFailingTests} failed\n"
+    console.log "\n\nran #{@testCount} tests >> #{@passingTests.length} passed >> #{numberOfFailingTests} failed\n"
 
     setupFailures = 0
     for fixtureName, tests of @setupFailures
@@ -158,39 +161,95 @@ class PorcelainFeedback
     return "unknown" if stackArr.length == 0
     return stackArr.join "\n"
 
-class TeamCityFeedback
-  outputMessage: (state, name, error) ->
-    name = name.replace /'/g, '|\''
-    if error?
-      error = error.replace /'/g, '|\''
-      process.stdout.write "##teamcity[#{state} name='#{name}' message='#{error}' details='#{error}']\r\n"
-    else
-      process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
-      
-  outputStartedMessage: (name) ->
-    name = name.replace /'/g, '|\''
-    process.stdout.write "##teamcity[testStarted name='#{name}' captureStandardOutput='true']\r\n"
-
-  start: (fixtureName, testName) -> 
-    @outputStartedMessage "#{fixtureName}.#{testName}"
-
-  pass: (fixtureName, testName) -> 
-    @outputMessage 'testFinished', "#{fixtureName}.#{testName}"
-     
-  fail: (fixtureName, testName, error) -> 
-    @outputMessage 'testFailed', "#{fixtureName}.#{testName}", error
-    @outputMessage 'testFinished', "#{fixtureName}.#{testName}"
-     
-  setupFail: (fixtureName, testName, error) ->
-  tearDownFail: (fixtureName, testName, error) ->
-  finish: ->
+class TeamCityXmlFeedback
+  constructor: ->
+    @totalTime = process.hrtime()
+    @fixtures = []
+    @totalFail = false
     
+  start: (fixtureName, testName) ->
+    @testTime = process.hrtime()
+    
+  pass: (fixtureName, testName) ->
+    @testTime = process.hrtime @testTime
+    @tests.push { name: testName, time: @testTime }
+    
+  fail: (fixtureName, testName, error) ->
+    @testTime = process.hrtime @testTime
+    @fixtureFail = true
+    @totalFail = true
+    @tests.push { name: testName, time: @testTime, error: error }
+    
+  setupFail: (fixtureName, testName, error) ->
+    @fixtureFail = true
+    @totalFail = true
+    
+  tearDownFail: (fixtureName, testName, error) ->
+  
   fixtureStart: (fixtureName) ->
-    @outputMessage 'testSuiteStarted', fixtureName
+    @tests = []
+    @fixtureFail = false
+    @fixtureTime = process.hrtime()
     
   fixtureFinish: (fixtureName) ->
-    @outputMessage 'testSuiteFinished', fixtureName
-      
+    @fixtureTime = process.hrtime @fixtureTime
+    @fixtures.push { name: fixtureName, tests: @tests, time: @fixtureTime, failed: @fixtureFail }
+    
+  formatTime: (t) ->
+    ((t[0] * 1.0e9 + t[1]) / 1.0e9).toString()
+
+  trimStack: (stack) =>
+    return "unknown" if stack == "unknown"
+    stackArr = stack.split '\n'
+    while true
+      break if stackArr.length == 0
+      break if stackArr[stackArr.length - 1].indexOf("Runner.global.Runner.Runner.run") > -1
+      stackArr.pop()
+    stackArr.pop() if stackArr.length > 1
+    return "unknown" if stackArr.length == 0
+    return stackArr.join "\n"
+  
+  finish: ->
+    @totalTime = process.hrtime @totalTime
+    
+    doc = xmlbuilder.create('test-results', {version: '1.0', encoding: 'UTF-8'})
+    fixtureParent = doc
+      .ele('test-suite')
+        .att('type', 'Assembly')
+        .att('name', 'JavaScriptTests')
+        .att('time', @formatTime(@totalTime))
+        .att('status', if @totalFail then 'Failure' else 'Success')
+        .att('success', if @totalFail then 'False' else 'True')
+        .att('executed', 'True')
+        .ele('results')
+        
+    for fixture in @fixtures
+      testsParent = fixtureParent
+        .ele('test-suite')
+          .att('type', 'TestFixture')
+          .att('name', fixture.name)
+          .att('time', @formatTime(fixture.time))
+          .att('status', if fixture.fixtureFail then 'Failure' else 'Success')
+          .att('success', if fixture.fixtureFail then 'False' else 'True')
+          .att('executed', 'True')
+          .ele('results')
+      for test in fixture.tests
+        testCaseEle = testsParent
+          .ele('test-case')
+            .att('name', "#{fixture.name}.#{test.name}")
+            .att('time', @formatTime(test.time))
+            .att('success', if test.error? then 'False' else 'True')
+            .att('executed', 'True')
+            .att('result', if test.error? then 'Failure' else 'Success')
+        if test.error?
+          testCaseEle
+            .ele('failure')
+              .ele('message').dat(test.error.message).up()
+              .ele('stack-trace').dat(@trimStack(test.error.stack))
+
+    xml = doc.toString({ pretty: true })
+    fs.writeFileSync 'test-results\\js-unit-test.xml', xml
+    
 class global.Runner
   constructor: (@testRoot, @fileMatcher) ->
     @files = glob.sync "#{@testRoot}/**/#{fileMatcher}"
@@ -200,13 +259,14 @@ class global.Runner
     
   run: ->
     if @teamcity
-      feedback = new TeamCityFeedback
+      feedback = new TeamCityXmlFeedback
     if @porcelain
       feedback = new PorcelainFeedback
     if !@porcelain and !@teamcity
       feedback = new NormalFeedback
-
+        
     for fixture in global._fixtures
+      feedback.fixtureStart fixture.name
       for own testName, testAction of fixture.body
         continue if testName == 'setup' or testName == 'teardown'
         
@@ -222,7 +282,6 @@ class global.Runner
           error.stack = "unknown" unless error.stack?
           feedback.setupFail fixture.name, testName, error
           setupFailed = true
-         
           
         if not setupFailed
           try
@@ -243,12 +302,12 @@ class global.Runner
             error.stack = undefined
           error.stack = "unknown" unless error.stack?
           feedback.tearDownFail fixture.name, testName, error
-
+      feedback.fixtureFinish fixture.name
     feedback.finish()
     
     # seems there's a bug in node where it doesn't wait for redirected output to be processed before exiting.
     #   not sure how else to work around this!
-    setTimeout (() -> process.exit()), 100
+    setTimeout (() -> process.exit()), 1000
 
 runner = new Runner(".", "**/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
 runner.run()
