@@ -309,5 +309,5 @@ class global.Runner
     #   not sure how else to work around this!
     setTimeout (() -> process.exit()), 1000
 
-runner = new Runner(".", "**/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
+runner = new Runner(".", "../src/WebRole/Scripts/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
 runner.run()
