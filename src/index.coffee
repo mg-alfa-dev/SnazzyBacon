@@ -159,36 +159,37 @@ class PorcelainFeedback
     return stackArr.join "\n"
 
 class TeamCityFeedback
-    outputMessage: (state, name, error) ->
-      name = name.replace /'/g, ''
-      if error?
-        error = error.replace /'/g, ''
-        process.stdout.write "##teamcity[#{state} name='#{name}' message='#{error}' details='#{error}']\r\n"
-      else
-        process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
+  outputMessage: (state, name, error) ->
+    name = name.replace /'/g, '|\''
+    if error?
+      error = error.replace /'/g, '|\''
+      process.stdout.write "##teamcity[#{state} name='#{name}' message='#{error}' details='#{error}']\r\n"
+    else
+      process.stdout.write "##teamcity[#{state} name='#{name}']\r\n"
+      
+  outputStartedMessage: (name) ->
+    name = name.replace /'/g, '|\''
+    process.stdout.write "##teamcity[testStarted name='#{name}' captureStandardOutput='true']\r\n"
 
-    start: (fixtureName, testName) -> 
-      @outputMessage 'testStarted', testName
-      
-    finish: (fixtureName, testName) -> 
-   
-    pass: (fixtureName, testName) -> 
-      @outputMessage 'testPassed', testName
-      @outputMessage 'testFinished', testName
+  start: (fixtureName, testName) -> 
+    @outputStartedMessage "#{fixtureName}.#{testName}"
+
+  pass: (fixtureName, testName) -> 
+    @outputMessage 'testFinished', "#{fixtureName}.#{testName}"
      
-    fail: (fixtureName, testName, error) -> 
-      @outputMessage 'testFailed', testName, error
-      @outputMessage 'testFinished', testName
+  fail: (fixtureName, testName, error) -> 
+    @outputMessage 'testFailed', "#{fixtureName}.#{testName}", error
+    @outputMessage 'testFinished', "#{fixtureName}.#{testName}"
      
-      
-    setupFail: (fixtureName, testName, error) ->
-    tearDownFail: (fixtureName, testName, error) ->
+  setupFail: (fixtureName, testName, error) ->
+  tearDownFail: (fixtureName, testName, error) ->
+  finish: ->
     
-    fixtureStart: (fixtureName) ->
-      @outputMessage 'testSuiteStarted', fixtureName
+  fixtureStart: (fixtureName) ->
+    @outputMessage 'testSuiteStarted', fixtureName
     
-    fixtureFinish: (fixtureName) ->
-      @outputMessage 'testSuiteFinished', fixtureName
+  fixtureFinish: (fixtureName) ->
+    @outputMessage 'testSuiteFinished', fixtureName
       
 class global.Runner
   constructor: (@testRoot, @fileMatcher) ->
