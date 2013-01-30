@@ -39,7 +39,7 @@ class NormalFeedback
   
   formatTestName: (fixtureName, testName) -> "#{fixtureName} -> #{testName}"
   
-  start: (fixtureName, testName) -> 
+  start: (fixtureName, testName) ->
     @testCount++
 
   pass: (fixtureName, testName) ->
@@ -66,7 +66,7 @@ class NormalFeedback
     @setupFailures[fixtureName] = null
     @teardownFailures[fixtureName] = null
   
-  fixtureFinish: () ->    
+  fixtureFinish: () ->
     
   finish: () ->
     numberOfFailingTests = 0
@@ -99,7 +99,7 @@ class NormalFeedback
         console.log "    Stack: #{error}"
       console.log()
 
-    if numberOfFailingTests > 0 
+    if numberOfFailingTests > 0
       console.log "================================"
       console.log "Test Failures"
       console.log "================================"
@@ -114,7 +114,7 @@ class NormalFeedback
     numberOfErrors = 0
     for fixtureName, tests of @errors
       numberOfErrors += tests.length
-    if numberOfErrors > 0 
+    if numberOfErrors > 0
       console.log "================================"
       console.log "Call stacks"
       console.log "================================"
@@ -277,7 +277,7 @@ class global.Runner
           fixture.setup?()
         catch error
           if(typeof(error) == 'string')
-            error = new Error(error) 
+            error = new Error(error)
             error.stack = undefined
           error.stack = "unknown" unless error.stack?
           feedback.setupFail fixture.name, testName, error
@@ -289,7 +289,7 @@ class global.Runner
             feedback.pass fixture.name, testName
           catch error
             if(typeof(error) == 'string')
-              error = new Error(error) 
+              error = new Error(error)
               error.stack = undefined
             error.stack = "unknown" unless error.stack?
             feedback.fail fixture.name, testName, error
@@ -298,7 +298,7 @@ class global.Runner
           fixture.teardown?()
         catch error
           if(typeof(error) == 'string')
-            error = new Error(error) 
+            error = new Error(error)
             error.stack = undefined
           error.stack = "unknown" unless error.stack?
           feedback.tearDownFail fixture.name, testName, error
