@@ -39,7 +39,7 @@ class NormalFeedback
   
   formatTestName: (fixtureName, testName) -> "#{fixtureName} -> #{testName}"
   
-  start: (fixtureName, testName) ->
+  start: (fixtureName, testName) -> 
     @testCount++
 
   pass: (fixtureName, testName) ->
@@ -99,7 +99,7 @@ class NormalFeedback
         console.log "    Stack: #{error}"
       console.log()
 
-    if numberOfFailingTests > 0
+    if numberOfFailingTests > 0 
       console.log "================================"
       console.log "Test Failures"
       console.log "================================"
@@ -114,7 +114,7 @@ class NormalFeedback
     numberOfErrors = 0
     for fixtureName, tests of @errors
       numberOfErrors += tests.length
-    if numberOfErrors > 0
+    if numberOfErrors > 0 
       console.log "================================"
       console.log "Call stacks"
       console.log "================================"
@@ -248,7 +248,7 @@ class TeamCityXmlFeedback
               .ele('stack-trace').dat(@trimStack(test.error.stack))
 
     xml = doc.toString({ pretty: true })
-    fs.writeFileSync 'test-results\\js-unit-test.xml', xml
+    fs.writeFileSync 'build\\test-results\\js-unit-test.xml', xml
     
 class global.Runner
   constructor: (@testRoot, @fileMatcher) ->
@@ -256,7 +256,7 @@ class global.Runner
     require(path.resolve file) for file in @files
     @porcelain = process.argv[2] == '--porcelain'
     @teamcity = process.argv[2] == '--teamcity'
-    
+
   run: ->
     if @teamcity
       feedback = new TeamCityXmlFeedback
@@ -264,7 +264,7 @@ class global.Runner
       feedback = new PorcelainFeedback
     if !@porcelain and !@teamcity
       feedback = new NormalFeedback
-        
+
     for fixture in global._fixtures
       feedback.fixtureStart fixture.name
       for own testName, testAction of fixture.body
@@ -277,19 +277,19 @@ class global.Runner
           fixture.setup?()
         catch error
           if(typeof(error) == 'string')
-            error = new Error(error)
+            error = new Error(error) 
             error.stack = undefined
           error.stack = "unknown" unless error.stack?
           feedback.setupFail fixture.name, testName, error
           setupFailed = true
-          
+         
         if not setupFailed
           try
             testAction()
             feedback.pass fixture.name, testName
           catch error
             if(typeof(error) == 'string')
-              error = new Error(error)
+              error = new Error(error) 
               error.stack = undefined
             error.stack = "unknown" unless error.stack?
             feedback.fail fixture.name, testName, error
@@ -298,7 +298,7 @@ class global.Runner
           fixture.teardown?()
         catch error
           if(typeof(error) == 'string')
-            error = new Error(error)
+            error = new Error(error) 
             error.stack = undefined
           error.stack = "unknown" unless error.stack?
           feedback.tearDownFail fixture.name, testName, error
@@ -309,5 +309,5 @@ class global.Runner
     #   not sure how else to work around this!
     setTimeout (() -> process.exit()), 1000
 
-runner = new Runner(".", "**/src/JavascriptTests/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
+runner = new Runner(".", "src/JavascriptTests/tests/*_tests.coffee") # '.' in this case is based on running from the base dir
 runner.run()
