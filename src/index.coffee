@@ -14,8 +14,8 @@ document.addEventListener = ->
 
 global._fixtures = []
 global.includeJsFile = (filePath, contextObjectName) ->
-  syncedFilePath = glob.sync "./**/#{filePath}"
-  resolvedPath = path.resolve syncedFilePath[0]
+  searchRoot = if filePath.indexOf('tests/') == 0 then './src/JavaScriptTests' else './src/WebRole/Scripts'
+  resolvedPath = (path.resolve "#{searchRoot}/#{filePath}")
 
   if contextObjectName?
     window[contextObjectName] = require(resolvedPath)
